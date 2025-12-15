@@ -1,19 +1,14 @@
 pipeline {
   agent any
-
-  options {
-    timestamps()
-  }
+  options { timestamps() }
 
   environment {
-    // Tags de imágenes
     IMG1 = "proyecto-docker:imagen1"
     IMG2 = "proyecto-docker:imagen2"
     IMG3 = "proyecto-docker:imagen3"
     IMG4 = "proyecto-docker:imagen4"
     IMG5 = "proyecto-docker:full5"
 
-    // Nombres de contenedores
     C1 = "rpm-env"
     C2 = "ruby-env"
     C3 = "node-env"
@@ -22,73 +17,56 @@ pipeline {
   }
 
   stages {
-
     stage('Checkout') {
-      steps {
-        checkout scm
-      }
+      steps { checkout scm }
     }
 
     stage('Build imágenes') {
       steps {
-        sh '''
-          set -e
+        bat '''
+          @echo on
+          cd Proyecto2
 
-          echo "=== Construyendo imágenes desde Proyecto2/Imagen#1..#5 ==="
+          docker build -t %IMG1% -f "Imagen#1\\Dockerfile" "Imagen#1" || EXIT /B 1
+          docker build -t %IMG2% -f "Imagen#2\\Dockerfile" "Imagen#2" || EXIT /B 1
+          docker build -t %IMG3% -f "Imagen#3\\Dockerfile" "Imagen#3" || EXIT /B 1
+          docker build -t %IMG4% -f "Imagen#4\\Dockerfile" "Imagen#4" || EXIT /B 1
+          docker build -t %IMG5% -f "Imagen#5\\Dockerfile" "Imagen#5" || EXIT /B 1
 
-          docker build -t "$IMG1" -f "Proyecto2/Imagen#1/Dockerfile" "Proyecto2/Imagen#1"
-          docker build -t "$IMG2" -f "Proyecto2/Imagen#2/Dockerfile" "Proyecto2/Imagen#2"
-          docker build -t "$IMG3" -f "Proyecto2/Imagen#3/Dockerfile" "Proyecto2/Imagen#3"
-          docker build -t "$IMG4" -f "Proyecto2/Imagen#4/Dockerfile" "Proyecto2/Imagen#4"
-          docker build -t "$IMG5" -f "Proyecto2/Imagen#5/Dockerfile" "Proyecto2/Imagen#5"
-
-          echo "=== Imágenes construidas ==="
-          docker images | grep proyecto-docker || true
+          echo SUCCESSFULLY: Imágenes construidas
         '''
       }
     }
 
     stage('Levantar contenedores') {
       steps {
-        sh '''
-          set -e
+        bat '''
+          @echo on
+          docker rm -f %C1% %C2% %C3% %C4% %C5% 2>NUL
 
-          echo "=== Limpiando contenedores viejos (si existen) ==="
-          docker rm -f "$C1" "$C2" "$C3" "$C4" "$C5" 2>/dev/null || true
+          docker run -d --name %C1% %IMG1% ping -t 127.0.0.1 >NUL || EXIT /B 1
+          docker run -d --name %C2% %IMG2% ping -t 127.0.0.1 >NUL || EXIT /B 1
+          docker run -d --name %C3% %IMG3% ping -t 127.0.0.1 >NUL || EXIT /B 1
+          docker run -d --name %C4% %IMG4% ping -t 127.0.0.1 >NUL || EXIT /B 1
+          docker run -d --name %C5% %IMG5% ping -t 127.0.0.1 >NUL || EXIT /B 1
 
-          echo "=== Levantando contenedores (dejándolos corriendo) ==="
-          docker run -d --name "$C1" -t "$IMG1" tail -f /dev/null
-          docker run -d --name "$C2" -t "$IMG2" tail -f /dev/null
-          docker run -d --name "$C3" -t "$IMG3" tail -f /dev/null
-          docker run -d --name "$C4" -t "$IMG4" tail -f /dev/null
-          docker run -d --name "$C5" -t "$IMG5" tail -f /dev/null
-
-          echo "=== Contenedores activos ==="
-          docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}"
+          echo SUCCESSFULLY: Contenedores levantados
+          docker ps
         '''
       }
     }
 
-    stage('Verificación rápida') {
+    stage('Verificación') {
       steps {
-        sh '''
-          set -e
-          echo "=== Verificando versiones dentro de cada contenedor (rápido) ==="
+        bat '''
+          @echo on
+          docker ps --format "{{.Names}}" | findstr /I /C:"%C1%" >NUL || EXIT /B 1
+          docker ps --format "{{.Names}}" | findstr /I /C:"%C2%" >NUL || EXIT /B 1
+          docker ps --format "{{.Names}}" | findstr /I /C:"%C3%" >NUL || EXIT /B 1
+          docker ps --format "{{.Names}}" | findstr /I /C:"%C4%" >NUL || EXIT /B 1
+          docker ps --format "{{.Names}}" | findstr /I /C:"%C5%" >NUL || EXIT /B 1
 
-          echo "--- $C1 (rpm) ---"
-          docker exec "$C1" bash -lc "rpm --version || true"
-
-          echo "--- $C2 (ruby) ---"
-          docker exec "$C2" bash -lc "ruby -v || true; rbenv --version || true"
-
-          echo "--- $C3 (node) ---"
-          docker exec "$C3" bash -lc "node -v || true; npm -v || true; yarn -v || true"
-
-          echo "--- $C4 (python) ---"
-          docker exec "$C4" bash -lc "python3 --version || true; pip3 --version || true"
-
-          echo "--- $C5 (full) ---"
-          docker exec "$C5" bash -lc "ruby -v || true; node -v || true; python3 --version || true"
+          echo SUCCESSFULLY: Todos los contenedores están corriendo
         '''
       }
     }
@@ -96,12 +74,10 @@ pipeline {
 
   post {
     always {
-      sh '''
-        echo "=== Limpieza final ==="
-        docker rm -f "$C1" "$C2" "$C3" "$C4" "$C5" 2>/dev/null || true
+      bat '''
+        @echo on
+        docker rm -f %C1% %C2% %C3% %C4% %C5% 2>NUL
       '''
     }
   }
 }
- 
-
