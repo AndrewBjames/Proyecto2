@@ -18,56 +18,58 @@ pipeline {
 
   stages {
     stage('Checkout') {
-      steps { checkout scm }
+      steps {
+        checkout scm
+      }
     }
 
     stage('Build imágenes') {
       steps {
         bat '''
-          @echo on
-          cd Proyecto2
+@echo on
+cd Proyecto2
 
-          docker build -t %IMG1% -f "Imagen#1\\Dockerfile" "Imagen#1" || EXIT /B 1
-          docker build -t %IMG2% -f "Imagen#2\\Dockerfile" "Imagen#2" || EXIT /B 1
-          docker build -t %IMG3% -f "Imagen#3\\Dockerfile" "Imagen#3" || EXIT /B 1
-          docker build -t %IMG4% -f "Imagen#4\\Dockerfile" "Imagen#4" || EXIT /B 1
-          docker build -t %IMG5% -f "Imagen#5\\Dockerfile" "Imagen#5" || EXIT /B 1
+docker build -t %IMG1% -f "Imagen#1\\Dockerfile" "Imagen#1" || EXIT /B 1
+docker build -t %IMG2% -f "Imagen#2\\Dockerfile" "Imagen#2" || EXIT /B 1
+docker build -t %IMG3% -f "Imagen#3\\Dockerfile" "Imagen#3" || EXIT /B 1
+docker build -t %IMG4% -f "Imagen#4\\Dockerfile" "Imagen#4" || EXIT /B 1
+docker build -t %IMG5% -f "Imagen#5\\Dockerfile" "Imagen#5" || EXIT /B 1
 
-          echo SUCCESSFULLY: Imágenes construidas
-        '''
+echo SUCCESSFULLY: Imagenes construidas
+'''
       }
     }
 
     stage('Levantar contenedores') {
       steps {
         bat '''
-          @echo on
-          docker rm -f %C1% %C2% %C3% %C4% %C5% 2>NUL
+@echo on
+docker rm -f %C1% %C2% %C3% %C4% %C5% 2>NUL
 
-          docker run -d --name %C1% %IMG1% ping -t 127.0.0.1 >NUL || EXIT /B 1
-          docker run -d --name %C2% %IMG2% ping -t 127.0.0.1 >NUL || EXIT /B 1
-          docker run -d --name %C3% %IMG3% ping -t 127.0.0.1 >NUL || EXIT /B 1
-          docker run -d --name %C4% %IMG4% ping -t 127.0.0.1 >NUL || EXIT /B 1
-          docker run -d --name %C5% %IMG5% ping -t 127.0.0.1 >NUL || EXIT /B 1
+docker run -d --name %C1% %IMG1% sh -c "tail -f /dev/null" || EXIT /B 1
+docker run -d --name %C2% %IMG2% sh -c "tail -f /dev/null" || EXIT /B 1
+docker run -d --name %C3% %IMG3% sh -c "tail -f /dev/null" || EXIT /B 1
+docker run -d --name %C4% %IMG4% sh -c "tail -f /dev/null" || EXIT /B 1
+docker run -d --name %C5% %IMG5% sh -c "tail -f /dev/null" || EXIT /B 1
 
-          echo SUCCESSFULLY: Contenedores levantados
-          docker ps
-        '''
+echo SUCCESSFULLY: Contenedores levantados
+docker ps
+'''
       }
     }
 
     stage('Verificación') {
       steps {
         bat '''
-          @echo on
-          docker ps --format "{{.Names}}" | findstr /I /C:"%C1%" >NUL || EXIT /B 1
-          docker ps --format "{{.Names}}" | findstr /I /C:"%C2%" >NUL || EXIT /B 1
-          docker ps --format "{{.Names}}" | findstr /I /C:"%C3%" >NUL || EXIT /B 1
-          docker ps --format "{{.Names}}" | findstr /I /C:"%C4%" >NUL || EXIT /B 1
-          docker ps --format "{{.Names}}" | findstr /I /C:"%C5%" >NUL || EXIT /B 1
+@echo on
+docker ps --format "{{.Names}}" | findstr /I "%C1%" >NUL || EXIT /B 1
+docker ps --format "{{.Names}}" | findstr /I "%C2%" >NUL || EXIT /B 1
+docker ps --format "{{.Names}}" | findstr /I "%C3%" >NUL || EXIT /B 1
+docker ps --format "{{.Names}}" | findstr /I "%C4%" >NUL || EXIT /B 1
+docker ps --format "{{.Names}}" | findstr /I "%C5%" >NUL || EXIT /B 1
 
-          echo SUCCESSFULLY: Todos los contenedores están corriendo
-        '''
+echo SUCCESSFULLY: Todos los contenedores estan corriendo
+'''
       }
     }
   }
@@ -75,9 +77,10 @@ pipeline {
   post {
     always {
       bat '''
-        @echo on
-        docker rm -f %C1% %C2% %C3% %C4% %C5% 2>NUL
-      '''
+@echo on
+docker rm -f %C1% %C2% %C3% %C4% %C5% 2>NUL
+exit /b 0
+'''
     }
   }
 }
