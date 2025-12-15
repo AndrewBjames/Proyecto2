@@ -1,75 +1,107 @@
 pipeline {
+  agent any
 
-    agent any
- 
-    environment {
+  options {
+    timestamps()
+  }
 
-        COMPOSE_FILE = 'docker-compose.yml'
+  environment {
+    // Tags de imágenes
+    IMG1 = "proyecto-docker:imagen1"
+    IMG2 = "proyecto-docker:imagen2"
+    IMG3 = "proyecto-docker:imagen3"
+    IMG4 = "proyecto-docker:imagen4"
+    IMG5 = "proyecto-docker:full5"
 
-    }
- 
-    stages {
- 
-        stage('Checkout') {
+    // Nombres de contenedores
+    C1 = "rpm-env"
+    C2 = "ruby-env"
+    C3 = "node-env"
+    C4 = "python-env"
+    C5 = "full-stack-env"
+  }
 
-            steps {
+  stages {
 
-                checkout scm
-
-            }
-
-        }
- 
-        stage('Build Docker images') {
-
-            steps {
-
-                sh """
-
-                    echo "Construyendo imágenes..."
-
-                    docker-compose build
-
-                """
-
-            }
-
-        }
- 
-        stage('Levantar contenedores') {
-
-            steps {
-
-                sh """
-
-                    echo "Levantando contenedores..."
-
-                    docker-compose up -d
-
-                """
-
-            }
-
-        }
-
-    }
- 
-    post {
-
-        always {
-
-            sh """
-
-                echo "Deteniendo contenedores..."
-
-                docker-compose down || true
-
-            """
-
-        }
-
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
     }
 
+    stage('Build imágenes') {
+      steps {
+        sh '''
+          set -e
+
+          echo "=== Construyendo imágenes desde Proyecto2/Imagen#1..#5 ==="
+
+          docker build -t "$IMG1" -f "Proyecto2/Imagen#1/Dockerfile" "Proyecto2/Imagen#1"
+          docker build -t "$IMG2" -f "Proyecto2/Imagen#2/Dockerfile" "Proyecto2/Imagen#2"
+          docker build -t "$IMG3" -f "Proyecto2/Imagen#3/Dockerfile" "Proyecto2/Imagen#3"
+          docker build -t "$IMG4" -f "Proyecto2/Imagen#4/Dockerfile" "Proyecto2/Imagen#4"
+          docker build -t "$IMG5" -f "Proyecto2/Imagen#5/Dockerfile" "Proyecto2/Imagen#5"
+
+          echo "=== Imágenes construidas ==="
+          docker images | grep proyecto-docker || true
+        '''
+      }
+    }
+
+    stage('Levantar contenedores') {
+      steps {
+        sh '''
+          set -e
+
+          echo "=== Limpiando contenedores viejos (si existen) ==="
+          docker rm -f "$C1" "$C2" "$C3" "$C4" "$C5" 2>/dev/null || true
+
+          echo "=== Levantando contenedores (dejándolos corriendo) ==="
+          docker run -d --name "$C1" -t "$IMG1" tail -f /dev/null
+          docker run -d --name "$C2" -t "$IMG2" tail -f /dev/null
+          docker run -d --name "$C3" -t "$IMG3" tail -f /dev/null
+          docker run -d --name "$C4" -t "$IMG4" tail -f /dev/null
+          docker run -d --name "$C5" -t "$IMG5" tail -f /dev/null
+
+          echo "=== Contenedores activos ==="
+          docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}"
+        '''
+      }
+    }
+
+    stage('Verificación rápida') {
+      steps {
+        sh '''
+          set -e
+          echo "=== Verificando versiones dentro de cada contenedor (rápido) ==="
+
+          echo "--- $C1 (rpm) ---"
+          docker exec "$C1" bash -lc "rpm --version || true"
+
+          echo "--- $C2 (ruby) ---"
+          docker exec "$C2" bash -lc "ruby -v || true; rbenv --version || true"
+
+          echo "--- $C3 (node) ---"
+          docker exec "$C3" bash -lc "node -v || true; npm -v || true; yarn -v || true"
+
+          echo "--- $C4 (python) ---"
+          docker exec "$C4" bash -lc "python3 --version || true; pip3 --version || true"
+
+          echo "--- $C5 (full) ---"
+          docker exec "$C5" bash -lc "ruby -v || true; node -v || true; python3 --version || true"
+        '''
+      }
+    }
+  }
+
+  post {
+    always {
+      sh '''
+        echo "=== Limpieza final ==="
+        docker rm -f "$C1" "$C2" "$C3" "$C4" "$C5" 2>/dev/null || true
+      '''
+    }
+  }
 }
-
  
+
