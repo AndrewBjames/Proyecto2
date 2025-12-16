@@ -1,20 +1,26 @@
 pipeline {
   agent any
-  options { timestamps() }   // Muestra la hora en los logs
+  options { timestamps() }   // hora en los logs
 
   environment {
-    // Ruta del docker-compose dentro del repositorio
+    // docker-compose vive dentro de la carpeta Proyecto2
     COMPOSE_FILE = "Proyecto2/docker-compose.yml"
 
-    // Credenciales de Docker Hub guardadas en Jenkins
+    // credenciales Docker Hub en Jenkins (Username/Password)
     DOCKER_CREDS_ID = "dockerhub-creds"
+
+    // tags (ya los estás generando con docker compose; aquí solo los usamos para verificar)
+    IMG1 = "bkbigmac/proyectofinal2:imagen1"
+    IMG2 = "bkbigmac/proyectofinal2:imagen2"
+    IMG3 = "bkbigmac/proyectofinal2:imagen3"
+    IMG4 = "bkbigmac/proyectofinal2:imagen4"
+    IMG5 = "bkbigmac/proyectofinal2:imagen5"
   }
 
   stages {
 
     stage('Checkout') {
       steps {
-        // Descarga el código desde GitHub
         checkout scm
       }
     }
@@ -30,40 +36,45 @@ IF %ERRORLEVEL% NEQ 0 EXIT /B 1
       }
     }
 
-    stage('Verificación de herramientas') {
+    stage('Verificación (mostrar instalaciones)') {
       steps {
         bat """
 @echo on
-echo ===== VERIFICACION =====
+echo ===== VERIFICACION DE HERRAMIENTAS (LOGS) =====
 
-echo --- Imagen 1: RPM ---
-docker compose -f "%COMPOSE_FILE%" run --rm imagen1-rpm sh -lc "rpm --version && rpmbuild --version"
+echo.
+echo --- Imagen 1 (RPM) ---
+docker run --rm %IMG1% rpm --version
 IF %ERRORLEVEL% NEQ 0 EXIT /B 1
 
-echo --- Imagen 2: Ruby ---
-docker compose -f "%COMPOSE_FILE%" run --rm imagen2-ruby sh -lc "rbenv --version && ruby -v || echo Ruby no instalado"
+echo.
+echo --- Imagen 2 (Ruby + rbenv) ---
+docker run --rm %IMG2% bash -lc "rbenv --version && ruby -v" || docker run --rm %IMG2% sh -lc "rbenv --version && ruby -v"
 IF %ERRORLEVEL% NEQ 0 EXIT /B 1
 
-echo --- Imagen 3: Node ---
-docker compose -f "%COMPOSE_FILE%" run --rm imagen3-node sh -lc "node -v && npm -v && yarn -v"
+echo.
+echo --- Imagen 3 (Node + Yarn) ---
+docker run --rm %IMG3% bash -lc "node -v && npm -v && yarn -v" || docker run --rm %IMG3% sh -lc "node -v && npm -v && yarn -v"
 IF %ERRORLEVEL% NEQ 0 EXIT /B 1
 
-echo --- Imagen 4: Python ---
-docker compose -f "%COMPOSE_FILE%" run --rm imagen4-python sh -lc "python3 --version && pip3 --version"
+echo.
+echo --- Imagen 4 (Python + pip) ---
+docker run --rm %IMG4% bash -lc "python3 --version && pip3 --version" || docker run --rm %IMG4% sh -lc "python3 --version && pip3 --version"
 IF %ERRORLEVEL% NEQ 0 EXIT /B 1
 
-echo --- Imagen 5: Full Stack ---
-docker compose -f "%COMPOSE_FILE%" run --rm imagen5-full sh -lc "node -v && python3 --version && rbenv --version && ruby -v || echo Ruby no instalado"
+echo.
+echo --- Imagen 5 (FULL: RPM + Ruby/rbenv + Node/Yarn + Python) ---
+docker run --rm %IMG5% bash -lc "rpm --version && rbenv --version && ruby -v && node -v && yarn -v && python3 --version && pip3 --version" || docker run --rm %IMG5% sh -lc "rpm --version && rbenv --version && ruby -v && node -v && yarn -v && python3 --version && pip3 --version"
 IF %ERRORLEVEL% NEQ 0 EXIT /B 1
 
-echo ===== VERIFICACION COMPLETADA =====
+echo.
+echo ===== VERIFICACION OK =====
 """
       }
     }
 
     stage('Login Docker Hub') {
       steps {
-        // Inicia sesión en Docker Hub usando credenciales de Jenkins
         withCredentials([usernamePassword(
           credentialsId: DOCKER_CREDS_ID,
           usernameVariable: 'DOCKER_USER',
