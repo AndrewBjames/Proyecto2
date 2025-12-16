@@ -3,24 +3,22 @@ pipeline {
   options { timestamps() }
 
   environment {
-    COMPOSE_FILE = "docker-compose.yml"
+    // OJO: tu compose está dentro de la carpeta Proyecto2
+    COMPOSE_FILE = "Proyecto2/docker-compose.yml"
     DOCKER_CREDS_ID = "dockerhub-creds"
   }
 
   stages {
-
     stage('Checkout') {
-      steps {
-        checkout scm
-      }
+      steps { checkout scm }
     }
 
-    stage('Build TODAS las imagenes') {
+    stage('Build (5 imágenes)') {
       steps {
         bat """
 @echo on
-echo ===== BUILD DE TODAS LAS IMAGENES =====
-docker compose -f %COMPOSE_FILE% build
+echo ===== BUILD (5 IMAGENES) =====
+docker compose -f "%COMPOSE_FILE%" build
 IF %ERRORLEVEL% NEQ 0 EXIT /B 1
 """
       }
@@ -35,6 +33,7 @@ IF %ERRORLEVEL% NEQ 0 EXIT /B 1
         )]) {
           bat """
 @echo on
+echo ===== LOGIN =====
 echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
 IF %ERRORLEVEL% NEQ 0 EXIT /B 1
 """
@@ -42,12 +41,12 @@ IF %ERRORLEVEL% NEQ 0 EXIT /B 1
       }
     }
 
-    stage('Push TODAS las imagenes') {
+    stage('Push (5 imágenes)') {
       steps {
         bat """
 @echo on
-echo ===== PUSH DE TODAS LAS IMAGENES =====
-docker compose -f %COMPOSE_FILE% push
+echo ===== PUSH (5 IMAGENES) =====
+docker compose -f "%COMPOSE_FILE%" push
 IF %ERRORLEVEL% NEQ 0 EXIT /B 1
 """
       }
@@ -58,12 +57,13 @@ IF %ERRORLEVEL% NEQ 0 EXIT /B 1
     always {
       bat """
 @echo on
-echo ===== FIN DEL PIPELINE =====
+echo ===== FIN =====
 docker logout
 """
     }
   }
 }
+
 
 
 
