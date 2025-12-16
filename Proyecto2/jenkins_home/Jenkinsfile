@@ -1,100 +1,70 @@
 pipeline {
   agent any
-
-  options {
-    timestamps()
-    skipDefaultCheckout(true)
-  }
+  options { timestamps() }
 
   environment {
-    IMG1 = "proyecto-docker:imagen1"
-    IMG2 = "proyecto-docker:imagen2"
-    IMG3 = "proyecto-docker:imagen3"
-    IMG4 = "proyecto-docker:imagen4"
-    IMG5 = "proyecto-docker:full5"
-
-    C1 = "rpm-env"
-    C2 = "ruby-env"
-    C3 = "node-env"
-    C4 = "python-env"
-    C5 = "full-stack-env"
+    IMAGE_REPO = "bkbigmac/proyectofinal2"
+    SERVICE_NAME = "app"
+    COMPOSE_FILE = "docker-compose.yml"
+    DOCKER_CREDS_ID = "dockerhub-creds"
   }
 
   stages {
+
     stage('Checkout') {
       steps {
         checkout scm
       }
     }
 
-    stage('SonarQube Analysis') {
+    stage('Build imagen (Docker Compose)') {
       steps {
-        withSonarQubeEnv('SonarQube') {
-          script {
-            def scannerHome = tool 'SonarScanner'
-            bat """
+        bat """
 @echo on
-cd Proyecto2
-
-"${scannerHome}\\bin\\sonar-scanner.bat" ^
-  -Dsonar.projectKey=FinalProyect ^
-  -Dsonar.projectName=FinalProyect ^
-  -Dsonar.sources=. ^
-  -Dsonar.sourceEncoding=UTF-8
-
+echo ===== BUILD =====
+docker compose -f %COMPOSE_FILE% build %SERVICE_NAME% || docker-compose -f %COMPOSE_FILE% build %SERVICE_NAME%
 IF %ERRORLEVEL% NEQ 0 EXIT /B 1
 """
-          }
+      }
+    }
+
+    stage('Tag + Push a Docker Hub') {
+      steps {
+        withCredentials([usernamePassword(
+          credentialsId: DOCKER_CREDS_ID,
+          usernameVariable: 'DOCKER_USER',
+          passwordVariable: 'DOCKER_PASS'
+        )]) {
+          bat """
+@echo on
+echo ===== PUSH =====
+
+REM Tags identificables
+set TAG1=student-bkbigmac
+set TAG2=student-bkbigmac-build-%BUILD_NUMBER%
+
+REM Login
+echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
+IF %ERRORLEVEL% NEQ 0 EXIT /B 1
+
+REM Obtener IMAGE ID del servicio
+for /f "tokens=2" %%i in ('docker compose images %SERVICE_NAME% ^| findstr /R "^[a-zA-Z]"') do set IMG_ID=%%i
+if "%IMG_ID%"=="" (
+  echo ERROR: No se pudo obtener IMAGE ID
+  EXIT /B 1
+)
+
+REM Tag
+docker tag %IMG_ID% %IMAGE_REPO%:%TAG1%
+docker tag %IMG_ID% %IMAGE_REPO%:%TAG2%
+
+REM Push
+docker push %IMAGE_REPO%:%TAG1% || EXIT /B 1
+docker push %IMAGE_REPO%:%TAG2% || EXIT /B 1
+
+echo Push completado correctamente
+"""
         }
-      }
-    }
-
-    stage('Build imágenes') {
-      steps {
-        bat """
-@echo on
-cd Proyecto2
-
-docker build -t %IMG1% -f "Imagen#1\\Dockerfile" "Imagen#1" || EXIT /B 1
-docker build -t %IMG2% -f "Imagen#2\\Dockerfile" "Imagen#2" || EXIT /B 1
-docker build -t %IMG3% -f "Imagen#3\\Dockerfile" "Imagen#3" || EXIT /B 1
-docker build -t %IMG4% -f "Imagen#4\\Dockerfile" "Imagen#4" || EXIT /B 1
-docker build -t %IMG5% -f "Imagen#5\\Dockerfile" "Imagen#5" || EXIT /B 1
-
-echo SUCCESSFULLY: Imagenes construidas
-"""
-      }
-    }
-
-    stage('Levantar contenedores') {
-      steps {
-        bat """
-@echo on
-docker rm -f %C1% %C2% %C3% %C4% %C5% 2>NUL
-
-docker run -d --name %C1% %IMG1% sh -c "tail -f /dev/null" || EXIT /B 1
-docker run -d --name %C2% %IMG2% sh -c "tail -f /dev/null" || EXIT /B 1
-docker run -d --name %C3% %IMG3% sh -c "tail -f /dev/null" || EXIT /B 1
-docker run -d --name %C4% %IMG4% sh -c "tail -f /dev/null" || EXIT /B 1
-docker run -d --name %C5% %IMG5% sh -c "tail -f /dev/null" || EXIT /B 1
-
-docker ps
-"""
-      }
-    }
-
-    stage('Verificación') {
-      steps {
-        bat """
-@echo on
-docker ps --format "{{.Names}}" | findstr /I "%C1%" >NUL || EXIT /B 1
-docker ps --format "{{.Names}}" | findstr /I "%C2%" >NUL || EXIT /B 1
-docker ps --format "{{.Names}}" | findstr /I "%C3%" >NUL || EXIT /B 1
-docker ps --format "{{.Names}}" | findstr /I "%C4%" >NUL || EXIT /B 1
-docker ps --format "{{.Names}}" | findstr /I "%C5%" >NUL || EXIT /B 1
-
-echo SUCCESSFULLY: Todos los contenedores estan corriendo
-"""
       }
     }
   }
@@ -103,8 +73,7 @@ echo SUCCESSFULLY: Todos los contenedores estan corriendo
     always {
       bat """
 @echo on
-docker rm -f %C1% %C2% %C3% %C4% %C5% 2>NUL
-exit /b 0
+echo ===== FIN DEL PIPELINE =====
 """
     }
   }
