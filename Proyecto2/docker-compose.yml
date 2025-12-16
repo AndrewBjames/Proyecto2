@@ -1,10 +1,8 @@
-version: "3.9"
-
 services:
   imagen1-rpm:
     build:
       context: .
-      dockerfile: imagen1-rpm/imagen1-rpm.dockerfile
+      dockerfile: "Imagen#1/Dockerfile"
     image: bkbigmac/proyectofinal2:imagen1
     container_name: rpm-env
     tty: true
@@ -13,7 +11,7 @@ services:
   imagen2-ruby:
     build:
       context: .
-      dockerfile: imagen2-ruby/imagen2-ruby.dockerfile
+      dockerfile: "Imagen#2/Dockerfile"
     image: bkbigmac/proyectofinal2:imagen2
     container_name: ruby-env
     tty: true
@@ -22,7 +20,7 @@ services:
   imagen3-node:
     build:
       context: .
-      dockerfile: images-node/imagen3.dockerfile
+      dockerfile: "Imagen#3/Dockerfile"
     image: bkbigmac/proyectofinal2:imagen3
     container_name: node-env
     tty: true
@@ -31,7 +29,7 @@ services:
   imagen4-python:
     build:
       context: .
-      dockerfile: images-python/imagen4-python.dockerfile
+      dockerfile: "Imagen#4/Dockerfile"
     image: bkbigmac/proyectofinal2:imagen4
     container_name: python-env
     tty: true
@@ -40,9 +38,11 @@ services:
   imagen5-full:
     build:
       context: .
-      dockerfile: images-full/imagesFull.dockerfile
+      dockerfile: "Imagen#5/Dockerfile"
     image: bkbigmac/proyectofinal2:imagen5
     container_name: full-stack-env
     tty: true
     stdin_open: true
+
+
 
