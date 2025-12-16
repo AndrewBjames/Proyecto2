@@ -1,16 +1,22 @@
 pipeline {
   agent any
-  options { timestamps() }
+  options { timestamps() } // logs con hora
 
   environment {
-    // OJO: tu compose está dentro de la carpeta Proyecto2
+    // Tu docker-compose está dentro de la carpeta Proyecto2
     COMPOSE_FILE = "Proyecto2/docker-compose.yml"
+
+    // ID de credenciales en Jenkins (Username/Password)
     DOCKER_CREDS_ID = "dockerhub-creds"
   }
 
   stages {
+
     stage('Checkout') {
-      steps { checkout scm }
+      steps {
+        // Trae el repo desde GitHub
+        checkout scm
+      }
     }
 
     stage('Build (5 imágenes)') {
@@ -26,6 +32,7 @@ IF %ERRORLEVEL% NEQ 0 EXIT /B 1
 
     stage('Login Docker Hub') {
       steps {
+        // Usa credenciales guardadas en Jenkins
         withCredentials([usernamePassword(
           credentialsId: DOCKER_CREDS_ID,
           usernameVariable: 'DOCKER_USER',
@@ -33,7 +40,7 @@ IF %ERRORLEVEL% NEQ 0 EXIT /B 1
         )]) {
           bat """
 @echo on
-echo ===== LOGIN =====
+echo ===== LOGIN DOCKER HUB =====
 echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
 IF %ERRORLEVEL% NEQ 0 EXIT /B 1
 """
@@ -57,12 +64,13 @@ IF %ERRORLEVEL% NEQ 0 EXIT /B 1
     always {
       bat """
 @echo on
-echo ===== FIN =====
-docker logout
+echo ===== FIN DEL PIPELINE =====
 """
     }
   }
 }
+
+
 
 
 
