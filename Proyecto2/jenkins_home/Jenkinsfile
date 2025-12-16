@@ -23,6 +23,28 @@ pipeline {
       }
     }
 
+    stage('SonarQube Analysis') {
+      steps {
+        // IMPORTANTE: 'Sonarqube' debe ser EXACTAMENTE el Name en:
+        // Manage Jenkins -> System -> SonarQube servers
+        withSonarQubeEnv('Sonarqube') {
+          bat '''
+@echo on
+cd Proyecto2
+
+REM Opcion A (recomendada): usar sonar-scanner si lo tienes instalado en Jenkins como tool o en el PATH
+sonar-scanner ^
+  -Dsonar.projectKey=FinalProyect ^
+  -Dsonar.projectName=FinalProyect ^
+  -Dsonar.sources=. ^
+  -Dsonar.sourceEncoding=UTF-8
+
+IF %ERRORLEVEL% NEQ 0 EXIT /B 1
+'''
+        }
+      }
+    }
+
     stage('Build imágenes') {
       steps {
         bat '''
