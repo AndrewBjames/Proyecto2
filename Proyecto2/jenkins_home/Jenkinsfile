@@ -1,5 +1,6 @@
 pipeline {
   agent any
+
   options {
     timestamps()
     skipDefaultCheckout(true)
@@ -30,11 +31,13 @@ pipeline {
     stage('SonarQube Analysis') {
       steps {
         withSonarQubeEnv('SonarQube') {
-          bat """
+          script {
+            def scannerHome = tool 'SonarScanner'
+            bat """
 @echo on
 cd Proyecto2
 
-sonar-scanner ^
+"${scannerHome}\\bin\\sonar-scanner.bat" ^
   -Dsonar.projectKey=FinalProyect ^
   -Dsonar.projectName=FinalProyect ^
   -Dsonar.sources=. ^
@@ -42,6 +45,7 @@ sonar-scanner ^
 
 IF %ERRORLEVEL% NEQ 0 EXIT /B 1
 """
+          }
         }
       }
     }
@@ -75,7 +79,6 @@ docker run -d --name %C3% %IMG3% sh -c "tail -f /dev/null" || EXIT /B 1
 docker run -d --name %C4% %IMG4% sh -c "tail -f /dev/null" || EXIT /B 1
 docker run -d --name %C5% %IMG5% sh -c "tail -f /dev/null" || EXIT /B 1
 
-echo SUCCESSFULLY: Contenedores levantados
 docker ps
 """
       }
@@ -83,27 +86,4 @@ docker ps
 
     stage('Verificación') {
       steps {
-        bat """
-@echo on
-docker ps --format "{{.Names}}" | findstr /I "%C1%" >NUL || EXIT /B 1
-docker ps --format "{{.Names}}" | findstr /I "%C2%" >NUL || EXIT /B 1
-docker ps --format "{{.Names}}" | findstr /I "%C3%" >NUL || EXIT /B 1
-docker ps --format "{{.Names}}" | findstr /I "%C4%" >NUL || EXIT /B 1
-docker ps --format "{{.Names}}" | findstr /I "%C5%" >NUL || EXIT /B 1
 
-echo SUCCESSFULLY: Todos los contenedores estan corriendo
-"""
-      }
-    }
-  }
-
-  post {
-    always {
-      bat """
-@echo on
-docker rm -f %C1% %C2% %C3% %C4% %C5% 2>NUL
-exit /b 0
-"""
-    }
-  }
-}
