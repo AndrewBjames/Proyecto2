@@ -1,6 +1,9 @@
 pipeline {
   agent any
-  options { timestamps() }
+  options {
+    timestamps()
+    skipDefaultCheckout(true)
+  }
 
   environment {
     IMG1 = "proyecto-docker:imagen1"
@@ -17,6 +20,7 @@ pipeline {
   }
 
   stages {
+
     stage('Checkout') {
       steps {
         checkout scm
@@ -25,14 +29,11 @@ pipeline {
 
     stage('SonarQube Analysis') {
       steps {
-        // IMPORTANTE: 'Sonarqube' debe ser EXACTAMENTE el Name en:
-        // Manage Jenkins -> System -> SonarQube servers
-        withSonarQubeEnv('Sonarqube') {
+        withSonarQubeEnv('SonarQube') {
           bat '''
 @echo on
 cd Proyecto2
 
-REM Opcion A (recomendada): usar sonar-scanner si lo tienes instalado en Jenkins como tool o en el PATH
 sonar-scanner ^
   -Dsonar.projectKey=FinalProyect ^
   -Dsonar.projectName=FinalProyect ^
@@ -72,37 +73,5 @@ docker run -d --name %C1% %IMG1% sh -c "tail -f /dev/null" || EXIT /B 1
 docker run -d --name %C2% %IMG2% sh -c "tail -f /dev/null" || EXIT /B 1
 docker run -d --name %C3% %IMG3% sh -c "tail -f /dev/null" || EXIT /B 1
 docker run -d --name %C4% %IMG4% sh -c "tail -f /dev/null" || EXIT /B 1
-docker run -d --name %C5% %IMG5% sh -c "tail -f /dev/null" || EXIT /B 1
+docker run -d --name %C5% %IMG5% sh -c "tail -f /dev
 
-echo SUCCESSFULLY: Contenedores levantados
-docker ps
-'''
-      }
-    }
-
-    stage('Verificación') {
-      steps {
-        bat '''
-@echo on
-docker ps --format "{{.Names}}" | findstr /I "%C1%" >NUL || EXIT /B 1
-docker ps --format "{{.Names}}" | findstr /I "%C2%" >NUL || EXIT /B 1
-docker ps --format "{{.Names}}" | findstr /I "%C3%" >NUL || EXIT /B 1
-docker ps --format "{{.Names}}" | findstr /I "%C4%" >NUL || EXIT /B 1
-docker ps --format "{{.Names}}" | findstr /I "%C5%" >NUL || EXIT /B 1
-
-echo SUCCESSFULLY: Todos los contenedores estan corriendo
-'''
-      }
-    }
-  }
-
-  post {
-    always {
-      bat '''
-@echo on
-docker rm -f %C1% %C2% %C3% %C4% %C5% 2>NUL
-exit /b 0
-'''
-    }
-  }
-}
