@@ -1,12 +1,12 @@
 pipeline {
   agent any
-  options { timestamps() } // logs con hora
+  options { timestamps() }   // Muestra la hora en los logs
 
   environment {
-    // Tu docker-compose está dentro de la carpeta Proyecto2
+    // Ruta del docker-compose dentro del repositorio
     COMPOSE_FILE = "Proyecto2/docker-compose.yml"
 
-    // ID de credenciales en Jenkins (Username/Password)
+    // Credenciales de Docker Hub guardadas en Jenkins
     DOCKER_CREDS_ID = "dockerhub-creds"
   }
 
@@ -14,7 +14,7 @@ pipeline {
 
     stage('Checkout') {
       steps {
-        // Trae el repo desde GitHub
+        // Descarga el código desde GitHub
         checkout scm
       }
     }
@@ -30,9 +30,40 @@ IF %ERRORLEVEL% NEQ 0 EXIT /B 1
       }
     }
 
+    stage('Verificación de herramientas') {
+      steps {
+        bat """
+@echo on
+echo ===== VERIFICACION =====
+
+echo --- Imagen 1: RPM ---
+docker compose -f "%COMPOSE_FILE%" run --rm imagen1-rpm sh -lc "rpm --version && rpmbuild --version"
+IF %ERRORLEVEL% NEQ 0 EXIT /B 1
+
+echo --- Imagen 2: Ruby ---
+docker compose -f "%COMPOSE_FILE%" run --rm imagen2-ruby sh -lc "rbenv --version && ruby -v || echo Ruby no instalado"
+IF %ERRORLEVEL% NEQ 0 EXIT /B 1
+
+echo --- Imagen 3: Node ---
+docker compose -f "%COMPOSE_FILE%" run --rm imagen3-node sh -lc "node -v && npm -v && yarn -v"
+IF %ERRORLEVEL% NEQ 0 EXIT /B 1
+
+echo --- Imagen 4: Python ---
+docker compose -f "%COMPOSE_FILE%" run --rm imagen4-python sh -lc "python3 --version && pip3 --version"
+IF %ERRORLEVEL% NEQ 0 EXIT /B 1
+
+echo --- Imagen 5: Full Stack ---
+docker compose -f "%COMPOSE_FILE%" run --rm imagen5-full sh -lc "node -v && python3 --version && rbenv --version && ruby -v || echo Ruby no instalado"
+IF %ERRORLEVEL% NEQ 0 EXIT /B 1
+
+echo ===== VERIFICACION COMPLETADA =====
+"""
+      }
+    }
+
     stage('Login Docker Hub') {
       steps {
-        // Usa credenciales guardadas en Jenkins
+        // Inicia sesión en Docker Hub usando credenciales de Jenkins
         withCredentials([usernamePassword(
           credentialsId: DOCKER_CREDS_ID,
           usernameVariable: 'DOCKER_USER',
@@ -69,10 +100,3 @@ echo ===== FIN DEL PIPELINE =====
     }
   }
 }
-
-
-
-
-
-
-
