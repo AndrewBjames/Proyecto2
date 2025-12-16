@@ -3,8 +3,6 @@ pipeline {
   options { timestamps() }
 
   environment {
-    IMAGE_REPO = "bkbigmac/proyectofinal2"
-    SERVICE_NAME = "app"
     COMPOSE_FILE = "docker-compose.yml"
     DOCKER_CREDS_ID = "dockerhub-creds"
   }
@@ -17,18 +15,18 @@ pipeline {
       }
     }
 
-    stage('Build imagen (Docker Compose)') {
+    stage('Build TODAS las imagenes') {
       steps {
         bat """
 @echo on
-echo ===== BUILD =====
-docker compose -f %COMPOSE_FILE% build %SERVICE_NAME% || docker-compose -f %COMPOSE_FILE% build %SERVICE_NAME%
+echo ===== BUILD DE TODAS LAS IMAGENES =====
+docker compose -f %COMPOSE_FILE% build
 IF %ERRORLEVEL% NEQ 0 EXIT /B 1
 """
       }
     }
 
-    stage('Tag + Push a Docker Hub') {
+    stage('Login Docker Hub') {
       steps {
         withCredentials([usernamePassword(
           credentialsId: DOCKER_CREDS_ID,
@@ -37,34 +35,21 @@ IF %ERRORLEVEL% NEQ 0 EXIT /B 1
         )]) {
           bat """
 @echo on
-echo ===== PUSH =====
-
-REM Tags identificables
-set TAG1=student-bkbigmac
-set TAG2=student-bkbigmac-build-%BUILD_NUMBER%
-
-REM Login
 echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
 IF %ERRORLEVEL% NEQ 0 EXIT /B 1
-
-REM Obtener IMAGE ID del servicio
-for /f "tokens=2" %%i in ('docker compose images %SERVICE_NAME% ^| findstr /R "^[a-zA-Z]"') do set IMG_ID=%%i
-if "%IMG_ID%"=="" (
-  echo ERROR: No se pudo obtener IMAGE ID
-  EXIT /B 1
-)
-
-REM Tag
-docker tag %IMG_ID% %IMAGE_REPO%:%TAG1%
-docker tag %IMG_ID% %IMAGE_REPO%:%TAG2%
-
-REM Push
-docker push %IMAGE_REPO%:%TAG1% || EXIT /B 1
-docker push %IMAGE_REPO%:%TAG2% || EXIT /B 1
-
-echo Push completado correctamente
 """
         }
+      }
+    }
+
+    stage('Push TODAS las imagenes') {
+      steps {
+        bat """
+@echo on
+echo ===== PUSH DE TODAS LAS IMAGENES =====
+docker compose -f %COMPOSE_FILE% push
+IF %ERRORLEVEL% NEQ 0 EXIT /B 1
+"""
       }
     }
   }
@@ -74,9 +59,12 @@ echo Push completado correctamente
       bat """
 @echo on
 echo ===== FIN DEL PIPELINE =====
+docker logout
 """
     }
   }
 }
+
+
 
 
